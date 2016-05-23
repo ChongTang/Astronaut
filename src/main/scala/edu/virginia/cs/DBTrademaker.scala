@@ -7,15 +7,18 @@ import edu.virginia.cs.Framework._
 import edu.virginia.cs.Framework.Types.DBSpecification
 import edu.virginia.cs.Framework.Types.DBImplementation
 import java.io.File
+
 import edu.virginia.cs.Synthesizer.SmartBridge
 import edu.virginia.cs.Synthesizer.AlloyOMToAlloyDM
 import java.util.HashMap
 import java.util.ArrayList
+
 import edu.virginia.cs.Synthesizer.CodeNamePair
 import edu.virginia.cs.Synthesizer.Sig
 import edu.virginia.cs.Framework.Types.ObjectSpec
 import edu.virginia.cs.Framework.Types.ObjectSet
 import java.io.PrintWriter
+
 import edu.virginia.cs.Synthesizer.LoadSynthesizer
 import edu.virginia.cs.Framework.Types.ObjectOfDM
 import edu.virginia.cs.Framework.Types.AbstractLoad
@@ -28,9 +31,11 @@ import edu.virginia.cs.Framework.Types.DBFormalAbstractMeasurementFunctionSet
 import edu.virginia.cs.Framework.Types.DBFormalImplementation
 import edu.virginia.cs.Framework.Types.DBFormalConcreteMeasurementFunctionSet
 import edu.virginia.cs.Uniq.DeleteUniq
+
 import scala.collection.JavaConversions._
 import java.text.NumberFormat
 import java.text.ParsePosition
+
 import edu.virginia.cs.Synthesizer.PrintOrder
 import edu.virginia.cs.Framework.Types.DBFormalAbstractMeasurementFunction
 import edu.virginia.cs.Framework.Types.DBFormalConcreteTimeMeasurementFunction
@@ -50,8 +55,11 @@ import edu.virginia.cs.Framework.Types.DBTimeMeasurementResult
 import java.util.Random
 import java.util.UUID
 import java.io.FileWriter
+
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
+
+//import scala.tools.nsc.transform.SpecializeTypes.Implementation
 
 class DBTrademaker extends TrademakerFramework {
 
@@ -88,13 +96,20 @@ class DBTrademaker extends TrademakerFramework {
 
       if (resultHead != defaultValue) {
         var implPath: String = fst(resultHead).asInstanceOf[DBImplementation].getImPath
-        var specName = implPath.substring(implPath.lastIndexOf(File.separator) + 1, implPath.indexOf("_"))
+        println("implPath = "+implPath + ", length = " + implPath.length)
+        val startIdx = implPath.lastIndexOf(File.separator) + 1
+        // get solution file name, which is like: customerOrderObjectModel_Sol_2.sql
+        val tmpPath = implPath.substring(startIdx)
+        val endIdx = tmpPath.indexOf("_")
+        val specName = tmpPath.substring(0, endIdx)
+        println("Spec Name = " + specName)
         implPath = implPath.substring(0, implPath.lastIndexOf(File.separator))
         implPath = implPath.substring(0, implPath.lastIndexOf(File.separator) + 1)
-        var resultFilePath = implPath + specName + ".txt"
+        println("implPath = "+implPath)
+        val resultFilePath = implPath + specName + ".txt"
 
-        var resultFile = new File(resultFilePath)
-        var pw = new PrintWriter(resultFile)
+        val resultFile = new File(resultFilePath)
+        val pw = new PrintWriter(resultFile)
 
         while (resultHead != defaultValue) {
           var impl = fst(resultHead)
@@ -175,7 +190,7 @@ class DBTrademaker extends TrademakerFramework {
     var mfSets: List[MeasurementFunctionSetType] = Nil()
 
     var dbImpls: ArrayList[DBImplementation] = new ArrayList
-    var defaultValue = new ImplementationType
+    var defaultValue : ImplementationType = null // = new ImplementationType
     var head = hd[ImplementationType](defaultValue)(impls)
     var tail = tl[ImplementationType](impls)
     while (head != defaultValue) {
@@ -586,7 +601,7 @@ class DBTrademaker extends TrademakerFramework {
      * 2. create RDD based on the list
      * 3. call Spark's map to execute
      */
-    val conf = new SparkConf().setAppName("Trademaker")
+    val conf = new SparkConf().setAppName("Astronaut")
       .set("spark.akka.frameSize","200")
       .set("spark.default.parallelism","16")
       .set("spark.storage.blockManagerSlaveTimeoutMs","600000")
@@ -698,7 +713,13 @@ class DBTrademaker extends TrademakerFramework {
     solFolder = solFolder + File.separator + alloyOMName + File.separator + "ImplSolution"
     recursiveDelete(new File(solFolder))
     if (!new File(solFolder).exists()) {
-      new File(solFolder).mkdirs()
+      var fileFP = new File(solFolder)
+      val rtn = fileFP.mkdirs()
+      if(rtn){
+        System.out.println("Solution folder created!:::"+solFolder);
+      } else {
+        System.out.println("Create solution folder failed!");
+      }
     }
 
     // get mapping run file
@@ -1733,7 +1754,7 @@ class DBTrademaker extends TrademakerFramework {
       // convert between List in extracted code and ArrayList in Java
       var impls: ArrayList[DBImplementation] = new ArrayList[DBImplementation]()
 
-      var defaultValue = new ImplementationType
+      var defaultValue:ImplementationType = null //= new ImplementationType
       var implHd: ImplementationType = hd[ImplementationType](defaultValue)(implList)
       var implTl = tl[ImplementationType](implList)
 

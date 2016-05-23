@@ -30,6 +30,7 @@ object AppConfig {
   private final val hdfsFile = params.getString("hadoop.file")
   private final val sparkMaster = params.getString("spark.master")
   private final val resultFile = params.getString("resultFile")
+  private final var sparkSlaves: List[String] = params.getStringList("spark.slaves").toList
 
   def setSpecList(list:List[String]) {
     this.specList = list
@@ -51,6 +52,9 @@ object AppConfig {
     this.sparkMaster
   }
 
+  def getSparkSlaves():List[String] = {
+    this.sparkSlaves
+  }
   
   def getStoreAllSolutions(): Boolean = {
     this.storeAllSolutions
