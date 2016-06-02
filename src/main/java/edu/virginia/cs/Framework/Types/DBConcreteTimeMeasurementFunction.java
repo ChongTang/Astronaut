@@ -14,7 +14,7 @@ public class DBConcreteTimeMeasurementFunction extends DBConcreteMeasurementFunc
 	}
 	
 	public DBTimeMeasurementResult run(){
-		System.out.println("Run function in DBConcreteTimeMeasurementFunction");
+		System.out.println("Run functions in DBConcreteTimeMeasurementFunction");
 		dropDB();
 		createDB();
 		createTables();

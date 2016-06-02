@@ -1,6 +1,7 @@
 package edu.virginia.cs
 
 import java.util
+import java.io._
 
 /**
  * @author tang
@@ -12,11 +13,19 @@ object Main {
   var isDebugOn = AppConfig.getDebug
 
   def main(args: Array[String]) {
-    var spec = args(0)
-    var specList = new util.ArrayList[String]()
-    specList.add(spec)
-    AppConfig.setSpecList(specList)
-    var myDBTrademaker = new DBTrademaker()
+//  if specification is give by arguments,
+//  we will use it instead of those set in configuration file
+    if(args.length > 0) {
+      val specList = new util.ArrayList[String]()
+      for(spec <- args){
+        //    get full path of the spec file
+        val specPath = new File(spec).getAbsolutePath()
+        specList.add(specPath)
+      }
+      AppConfig.setSpecList(specList)
+    }
+
+    val myDBTrademaker = new DBTrademaker()
     myDBTrademaker.run()
 
     if (isDebugOn) {

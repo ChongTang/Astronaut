@@ -21,6 +21,7 @@ public class DBConcreteSpaceMeasurementFunction extends DBConcreteMeasurementFun
 //		runInsert();
 		double spaceConsumption = checkSpace();
 		// drop database after test
+//		Chong:
 		dropDB();
 		DBSpaceMeasurementResult dbSMR = new DBSpaceMeasurementResult(spaceConsumption);
 		return dbSMR;

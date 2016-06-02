@@ -10,8 +10,7 @@ import java.util.Set;
 
 public class DeleteUniq {
 	public static void del(String path) {
-//		String dirPath = "/home/tang/Desktop/ORM/Parser2/revised/newExamples-5/decider/ImplSolution";
-		//String dirPath = "/home/tang/Desktop/ORM/Parser2/revised/newExamples-6/decider/ImplSolution";
+
 		String dirPath = path;
 		HashSet<String> uniqFileList = uniqueFiles(cksums(getFileList(dirPath)));
 		
@@ -25,7 +24,7 @@ public class DeleteUniq {
 			}
 		}
 		
-		// delte xml files
+		// delete xml files
 		for(String s : delFiles){
 			new File(s).delete();
 		}
@@ -93,9 +92,6 @@ public class DeleteUniq {
 			}
 		}
 
-//		for (String s : hashSet) {
-//			files.add(s);
-//		}
 		return hashSet;
 	}
 

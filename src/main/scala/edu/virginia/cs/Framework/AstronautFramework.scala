@@ -1,6 +1,8 @@
 package edu.virginia.cs.Framework
 
-trait TrademakerFramework extends Serializable{
+import java.io.Serializable
+
+trait AstronautFramework extends Serializable{
 
   sealed abstract class Prod[A, B] extends Serializable
   case class Pair[A, B](x1: A, x2: B) extends Prod[A, B] with Serializable

@@ -2,24 +2,26 @@ package edu.virginia.cs
 
 import java.util.concurrent.TimeUnit
 
-import Synthesizer._
-import edu.virginia.cs.Framework._
-import edu.virginia.cs.Framework.Types.DBSpecification
-import edu.virginia.cs.Framework.Types.DBImplementation
-import java.io.File
 
-import edu.virginia.cs.Synthesizer.SmartBridge
-import edu.virginia.cs.Synthesizer.AlloyOMToAlloyDM
+import java.io.File
+import scala.collection.JavaConversions._
+import java.text.NumberFormat
+import java.text.ParsePosition
 import java.util.HashMap
 import java.util.ArrayList
 
-import edu.virginia.cs.Synthesizer.CodeNamePair
-import edu.virginia.cs.Synthesizer.Sig
+import java.io.PrintWriter
+import java.util.Random
+import java.util.UUID
+import java.io.FileWriter
+
+
+import edu.virginia.cs.Framework._
+import edu.virginia.cs.Framework.Types.DBSpecification
+import edu.virginia.cs.Framework.Types.DBImplementation
+
 import edu.virginia.cs.Framework.Types.ObjectSpec
 import edu.virginia.cs.Framework.Types.ObjectSet
-import java.io.PrintWriter
-
-import edu.virginia.cs.Synthesizer.LoadSynthesizer
 import edu.virginia.cs.Framework.Types.ObjectOfDM
 import edu.virginia.cs.Framework.Types.AbstractLoad
 import edu.virginia.cs.Framework.Types.AbstractQuery
@@ -30,13 +32,6 @@ import edu.virginia.cs.Framework.Types.FormalAbstractLoadSet
 import edu.virginia.cs.Framework.Types.DBFormalAbstractMeasurementFunctionSet
 import edu.virginia.cs.Framework.Types.DBFormalImplementation
 import edu.virginia.cs.Framework.Types.DBFormalConcreteMeasurementFunctionSet
-import edu.virginia.cs.Uniq.DeleteUniq
-
-import scala.collection.JavaConversions._
-import java.text.NumberFormat
-import java.text.ParsePosition
-
-import edu.virginia.cs.Synthesizer.PrintOrder
 import edu.virginia.cs.Framework.Types.DBFormalAbstractMeasurementFunction
 import edu.virginia.cs.Framework.Types.DBFormalConcreteTimeMeasurementFunction
 import edu.virginia.cs.Framework.Types.DBFormalConcreteSpaceMeasurementFunction
@@ -45,23 +40,30 @@ import edu.virginia.cs.Framework.Types.DBFormalAbstractSpaceMeasurementFunction
 import edu.virginia.cs.Framework.Types.DBConcreteMeasurementFunctionSet
 import edu.virginia.cs.Framework.Types.DBConcreteTimeMeasurementFunction
 import edu.virginia.cs.Framework.Types.DBConcreteSpaceMeasurementFunction
-import edu.virginia.cs.Framework.Types.DBMeasurementResult
-import edu.virginia.cs.Synthesizer.ORMParser
-import edu.virginia.cs.Synthesizer.FileOperation
 import edu.virginia.cs.Framework.Types.DBFormalSpecification
 import edu.virginia.cs.Framework.Types.AbstractQuery.Action
 import edu.virginia.cs.Framework.Types.DBSpaceMeasurementResult
 import edu.virginia.cs.Framework.Types.DBTimeMeasurementResult
-import java.util.Random
-import java.util.UUID
-import java.io.FileWriter
+import edu.virginia.cs.Framework.Types.DBMeasurementResult
+
+import edu.virginia.cs.Uniq.DeleteUniq
+
+import edu.virginia.cs.Synthesizer.PrintOrder
+import edu.virginia.cs.Synthesizer.ORMParser
+import edu.virginia.cs.Synthesizer.FileOperation
+import edu.virginia.cs.Synthesizer.CodeNamePair
+import edu.virginia.cs.Synthesizer.Sig
+import edu.virginia.cs.Synthesizer.LoadSynthesizer
+import edu.virginia.cs.Synthesizer.SmartBridge
+import edu.virginia.cs.Synthesizer.AlloyOMToAlloyDM
+
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
 
 //import scala.tools.nsc.transform.SpecializeTypes.Implementation
 
-class DBTrademaker extends TrademakerFramework {
+class DBTrademaker extends AstronautFramework {
 
   var isDebugOn = AppConfig.getDebug
   var timeInterval:Long = 1
@@ -74,49 +76,47 @@ class DBTrademaker extends TrademakerFramework {
   type FormalImplementationType >: DBFormalImplementation
 
   def run() = {
-    println("hello world")
-    var isDebugOn = AppConfig.getDebug
 
-    var specs = AppConfig.getSpecs
+    if(isDebugOn){
+      println("hello world")
+    }
+
+    val specs = AppConfig.getSpecs
     for (spec <- specs) {
-      var mySpec: DBSpecification = new DBSpecification(spec)
-      var evaluatedResults = tradespaceFunction(mySpec)
+      val mySpec: DBSpecification = new DBSpecification(spec)
+      val evaluatedResults = tradespaceFunction(mySpec)
 
       // write the result to files and print it out
       // iterate list of results
       // get head of the list 
       // get the tail of the list
-      var nilElem = Nil[Pair[ImplementationType, MeasurementFunctionSetType]]()
-      var defaultValue = Pair[ImplementationType, MeasurementResultSetType](new DBImplementation(""),
-        new DBMeasurementResult(new DBTimeMeasurementResult(-1.0, -1.0), new DBSpaceMeasurementResult(-1.0)));
+      val defaultValue = Pair[ImplementationType, MeasurementResultSetType](new DBImplementation(""),
+        new DBMeasurementResult(new DBTimeMeasurementResult(-1.0, -1.0), new DBSpaceMeasurementResult(-1.0)))
 
-      var castedResults = evaluatedResults.asInstanceOf[List[Pair[ImplementationType, MeasurementResultSetType]]]
+      val castedResults = evaluatedResults.asInstanceOf[List[Pair[ImplementationType, MeasurementResultSetType]]]
       var resultHead = hd[Pair[ImplementationType, MeasurementResultSetType]](defaultValue)(castedResults)
       var resultTail = tl[Pair[ImplementationType, MeasurementResultSetType]](castedResults)
 
       if (resultHead != defaultValue) {
         var implPath: String = fst(resultHead).asInstanceOf[DBImplementation].getImPath
-        println("implPath = "+implPath + ", length = " + implPath.length)
         val startIdx = implPath.lastIndexOf(File.separator) + 1
         // get solution file name, which is like: customerOrderObjectModel_Sol_2.sql
         val tmpPath = implPath.substring(startIdx)
         val endIdx = tmpPath.indexOf("_")
         val specName = tmpPath.substring(0, endIdx)
-        println("Spec Name = " + specName)
         implPath = implPath.substring(0, implPath.lastIndexOf(File.separator))
         implPath = implPath.substring(0, implPath.lastIndexOf(File.separator) + 1)
-        println("implPath = "+implPath)
         val resultFilePath = implPath + specName + ".txt"
 
         val resultFile = new File(resultFilePath)
         val pw = new PrintWriter(resultFile)
 
         while (resultHead != defaultValue) {
-          var impl = fst(resultHead)
-          var mr = snd(resultHead)
+          val impl = fst(resultHead)
+          val mr = snd(resultHead)
 
-          var sol = impl.asInstanceOf[DBImplementation].getImPath
-          var solName = sol.substring(sol.lastIndexOf(File.separator) + 1, sol.lastIndexOf("."))
+          val sol = impl.asInstanceOf[DBImplementation].getImPath
+          val solName = sol.substring(sol.lastIndexOf(File.separator) + 1, sol.lastIndexOf("."))
           pw.println(solName + ":" + mr.asInstanceOf[DBMeasurementResult].getTmr().getInsertTime() + ":" +
             mr.asInstanceOf[DBMeasurementResult].getTmr().getSelectTime() + ":" +
             mr.asInstanceOf[DBMeasurementResult].getSmr().getDbSpace())
@@ -159,7 +159,7 @@ class DBTrademaker extends TrademakerFramework {
     } else if (AppConfig.getIsRandom == 1) {
       // get concrete measurement function by random generator
       var mfs = genRandomConcreteMF(impls)
-      println("=======reverse begins=======")
+//      println("=======reverse begins=======")
       // Chong: copy self-defined list to Scala list while reversed
       var defaultValue = Nil[MeasurementFunctionSetType]()
       var head = hd[MeasurementFunctionSetType](defaultValue)(mfs)
@@ -171,7 +171,7 @@ class DBTrademaker extends TrademakerFramework {
         head = hd[MeasurementFunctionSetType](defaultValue)(tail)
         tail = tl[MeasurementFunctionSetType](tail)
       }
-      println("=======reverse finished=======")
+//      println("=======reverse finished=======")
 
       // iterate to create list of pairs, call "combine" will result in StackOverFlowError
       var zipped = combine(impls)(reversedMfs)
@@ -181,7 +181,10 @@ class DBTrademaker extends TrademakerFramework {
   }
 
   def genRandomConcreteMF(impls: List[ImplementationType]): List[MeasurementFunctionSetType] = {
-    println("genRandomConcreteMF starts")
+    if(isDebugOn){
+      println("genRandomConcreteMF starts")
+    }
+
     // create DBConcreteMeasurementFunctionSet for each of DBImplementation in impls
     /**
      *  convert List[ImplementationType] to ArrayList[DBImplementation]
@@ -250,7 +253,10 @@ class DBTrademaker extends TrademakerFramework {
       //        }
     }
     //    }
-    println("genRandomConcreteMF ends")
+    if(isDebugOn){
+      println("genRandomConcreteMF ends")
+    }
+
     return mfSets
   }
 
@@ -276,7 +282,7 @@ class DBTrademaker extends TrademakerFramework {
       new File(pathBase).mkdirs();
     }
     var insertPath = pathBase + File.separator + implFileName + "_insert.sql"
-    var compressedInsertPath = pathBase + File.separator + implFileName + "_insert.sql.tar.gz"
+//    var compressedInsertPath = pathBase + File.separator + implFileName + "_insert.sql.tar.gz"
     //    var tmpInsertPath = pathBase + File.separator + implFileName + "_insert_tmp.sql"
     insCL.setInsertPath(insertPath)
     insCL.setSelectPath("")
@@ -297,21 +303,21 @@ class DBTrademaker extends TrademakerFramework {
 
     for (s <- printOrder) {
       for (insertS <- allInsertStmts) {
-        var mapIt = insertS.iterator
+        val mapIt = insertS.iterator
         while (mapIt.hasNext) {
-          var elem = mapIt.next // (String, HashMap[Integer, String]) = (tableName, HashMap[ID, Statements])
+          val elem = mapIt.next // (String, HashMap[Integer, String]) = (tableName, HashMap[ID, Statements])
           if (elem._1.equalsIgnoreCase(s)) {
-            var tmp = elem._2
-            var tmpIt = tmp.iterator
+            val tmp = elem._2
+            val tmpIt = tmp.iterator
             while (tmpIt.hasNext) {
-              var stmt = tmpIt.next
+              val stmt = tmpIt.next
               insertPw.println(stmt._2)
             }
           }
         }
       }
     }
-    println("Insert test load's path is: "+insertPath)
+
     insCL.setInsertPath(insertPath)
     insertPw.flush()
     insertPw.close()
@@ -344,69 +350,49 @@ class DBTrademaker extends TrademakerFramework {
     if (!new File(pathBase).exists()) {
       new File(pathBase).mkdirs();
     }
-    var printOrder = PrintOrder.getOutPutOrders(pathBase)
+    val printOrder = PrintOrder.getOutPutOrders(pathBase)
 
-    var selectPath = pathBase + File.separator + implFileName + "_select.sql"
-    var compressedSelectPath = pathBase + File.separator + implFileName + "_select.sql.tar.gz"
+    val selectPath = pathBase + File.separator + implFileName + "_select.sql"
+//    val compressedSelectPath = pathBase + File.separator + implFileName + "_select.sql.tar.gz"
     //    var tmpSelectPath = pathBase + File.separator + implFileName + "_select_tmp.sql"
     selCL.setSelectPath(selectPath)
     selCL.setInsertPath("")
-    var selectFile: File = new File(selectPath)
+    val selectFile: File = new File(selectPath)
     //    var tmpSelectFile: File = new File(tmpSelectPath)
     if (!selectFile.exists()) {
       selectFile.createNewFile()
     }
-    //
-    //    if (tmpSelectFile.exists()) {
-    //      tmpSelectFile.delete()
-    //      tmpSelectFile.createNewFile()
-    //    } else {
-    //      tmpSelectFile.createNewFile()
-    //    }
-    var selectPw: PrintWriter = new PrintWriter(new FileWriter(selectPath, true))
+
+    val selectPw: PrintWriter = new PrintWriter(new FileWriter(selectPath, true))
     selectPw.println("USE " + implFileName + ";")
-    var allSelectStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]()
+    val allSelectStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]()
+
     for (elem <- selCL.getQuerySet()) {
-      var sq = elem.getSq()
-      var sqInOneObject = sq.getSelectStmtsInOneObject()
+      val sq = elem.getSq()
+      val sqInOneObject = sq.getSelectStmtsInOneObject()
       allSelectStmts.add(sqInOneObject)
     }
+
     for (s <- printOrder) {
       for (selectS <- allSelectStmts) {
-        var mapIt = selectS.iterator
+        val mapIt = selectS.iterator
         while (mapIt.hasNext) {
-          var elem = mapIt.next
+          val elem = mapIt.next // (String, HashMap[Integer, String]) = (tableName, HashMap[ID, Statements])
           if (elem._1.equalsIgnoreCase(s)) {
-            var elemList = elem._2.values()
-            for (e <- elemList) {
-              selectPw.println(e)
+            val tmp = elem._2
+            val tmpIt = tmp.iterator
+            while (tmpIt.hasNext) {
+              val stmt = tmpIt.next
+              selectPw.println(stmt._2)
             }
           }
         }
       }
     }
 
-    println("Select test load's path is: "+selectPath)
     selCL.setSelectPath(selectPath)
     selectPw.flush()
     selectPw.close()
-
-    // call shell command to remove duplicated lines,
-    // and write results back to tmp.sql file
-    //    var tmpFiles = pathBase + File.separator + "tmp.sql"
-    //    strCmd = "awk '!x[$0]++' " + selectPath
-    //    (Process(strCmd) #> new File(tmpFiles)).!
-    //    remove duplicate lines
-    //    var tmpFiles2 = tmpFiles + "2"
-    //    (Process(Seq("awk", "!x[$0]++", tmpSelectPath)) #> new File(tmpFiles)).!
-    //    add "RESET QUERY CACHE;" after each line
-    //    (Process(Seq("awk", "1;!(NR%1){print \"RESET QUERY CACHE;\";}", tmpFiles)) #> new File(tmpFiles2)).!
-    // mv tmp file to insert file
-    //    Process(Seq("mv", tmpFiles2, tmpSelectPath)).!
-    //    Process(Seq("mv", tmpFiles, tmpSelectPath)).!
-    //    Process(Seq("rm", tmpFiles)).!
-    //    (Process(Seq("cat", tmpSelectPath)) #>> new File(selectPath)).!
-    //    tmpSelectFile.delete()
 
     /**
      *   // compress test cases and delete sql file
@@ -422,7 +408,7 @@ class DBTrademaker extends TrademakerFramework {
 
   //  def generateRandomInstances(impl: DBImplementation, low: Integer, high: Integer): HashMap[String, HashMap[String, ArrayList[CodeNamePair]]] = {
   def generateRandomInstances(sigs: ArrayList[Sig], types: HashMap[String, String], low: Integer, high: Integer): HashMap[String, HashMap[String, ArrayList[CodeNamePair]]] = {
-    if (AppConfig.getDebug) {
+    if (isDebugOn) {
       println("Random Instance generator starts....")
     }
 
@@ -476,7 +462,7 @@ class DBTrademaker extends TrademakerFramework {
         }
       }
     }
-    if (AppConfig.getDebug) {
+    if (isDebugOn) {
       println("Random Instance generator ends....")
     }
     return instances
@@ -496,7 +482,6 @@ class DBTrademaker extends TrademakerFramework {
     var impl = fst(prod).asInstanceOf[DBImplementation]
     var mfs = snd(prod).asInstanceOf[DBConcreteMeasurementFunctionSet]
     mfs.setImpl(impl)
-    println("Implementation name: "+impl.getImPath())
 
     // Chong: if benchmark is random test loads, need to create concrete load first and then run them
     if (AppConfig.getIsRandom() == 1) {
@@ -546,7 +531,10 @@ class DBTrademaker extends TrademakerFramework {
         println("=======================")
       }
       var smr = smf.run()
-      println("DB space: "+smr.getDbSpace+"kb")
+      if(isDebugOn){
+        println("DB space: "+smr.getDbSpace+"kb")
+      }
+
       var dbmr = new DBMeasurementResult(tmr, smr)
       dbmr.setImpl(impl)
       val myPair = Pair[ImplementationType, MeasurementResultSetType](impl, dbmr)
@@ -560,14 +548,19 @@ class DBTrademaker extends TrademakerFramework {
 
       var inFile = new File(inPath)
       if (inFile.exists()) {
+//        Chong:
         inFile.delete()
       }
       var slFile = new File(slPath)
       if (slFile.exists()) {
+//        Chong:
         slFile.delete()
       }
     }
-    println("finish implementation: "+impl.getImPath()+":"+dbmr.getTmr.getInsertTime+","+dbmr.getTmr.getSelectTime+","+dbmr.getSmr.getDbSpace)
+
+    if(isDebugOn){
+      println("finish implementation: "+impl.getImPath()+":"+dbmr.getTmr.getInsertTime+","+dbmr.getTmr.getSelectTime+","+dbmr.getSmr.getDbSpace)
+    }
 
     // we can write the results into hadoop file system
     // /trademaker/modelName/solutionName
@@ -579,7 +572,7 @@ class DBTrademaker extends TrademakerFramework {
 
   // analyze and tradespace are already defined in Tradespace specification
   // we can call "tradespace" function to synthesize implementation and benchmark
-  var myTradespace: Tradespace = new Build_Tradespace(mySynthesizer _, myRunBenchmark _, my_analyze_MyMap _)
+  var myTradespace: Tradespace = new Build_Tradespace(mySynthesizer _, myRunBenchmark _, myMapReduce _)
   // here we get the tradespace function and analyze function
   def tradespaceFunction = tradespace(myTradespace) // fun: (SpecificationType => List[Prod[ImplementationType, BenchmarkResultType]])
   //var analyzeFunction = analyze(myTradespace)
@@ -590,9 +583,9 @@ class DBTrademaker extends TrademakerFramework {
    * @param list
    * @return list of implementation and measurement result
    */
-  def my_analyze_MyMap(list: List[Prod[ImplementationType, MeasurementFunctionSetType]]): List[Prod[ImplementationType, MeasurementResultSetType]] = {
+  def myMapReduce(list: List[Prod[ImplementationType, MeasurementFunctionSetType]]): List[Prod[ImplementationType, MeasurementResultSetType]] = {
     if (isDebugOn) {
-      println("This is my_analyze_MyMap function")
+      println("This is myMapReduce function")
     }
 
     /**
@@ -607,9 +600,10 @@ class DBTrademaker extends TrademakerFramework {
       .set("spark.storage.blockManagerSlaveTimeoutMs","600000")
       .set("spark.worker.timeout","600000")
       .set("spark.akka.timeout","600000")
-      .set("spark.akka.askTimeout", "600000")
-      .set("spark.akka.retry.wait","600000")
-      .set("spark.storage.memoryFraction","0.9")
+      .set("spark.rpc.askTimeout", "600000")
+      .set("spark.rpc.retry.wait","600000")
+      .set("spark.storage.memoryFraction","0.9");
+
 //      .setMaster("spark://centurion002.cs.virginia.edu:7077")
 //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 //      .set("spark.kryo.registrator", "edu.virginia.cs.MyRegistrator")
@@ -633,7 +627,6 @@ class DBTrademaker extends TrademakerFramework {
       head = hd[Prod[ImplementationType, MeasurementFunctionSetType]](defaultValue)(tail)
       tail = tl[Prod[ImplementationType, MeasurementFunctionSetType]](tail)
     }
-    println("newList size: "+newList.length)
     val rdd = sc.parallelize(newList)
 //    println("newList_RDD count: "+rdd.count())
     val evaluationResult = rdd.map(e => {
@@ -644,14 +637,22 @@ class DBTrademaker extends TrademakerFramework {
     })
 
 //    evaluationResult.foreach()
-    println("Finish execute! Go to collect()")
+    if(isDebugOn){
+      println("Finish execute! Go to collect()")
+    }
 
     val collectedResult = evaluationResult.collect()
 
-    println("Finish collect()")
+    if(isDebugOn){
+      println("Finish collect()")
+    }
+
     endTime = System.currentTimeMillis
     timeInterval = endTime - startTime
-    println("Spend time: " + TimeUnit.MILLISECONDS.toSeconds(timeInterval))
+
+    if(isDebugOn){
+      println("Spend time: " + TimeUnit.MILLISECONDS.toSeconds(timeInterval))
+    }
 
     var resultList:List[Prod[ImplementationType, MeasurementResultSetType]] = Nil[Prod[ImplementationType, MeasurementResultSetType]]()
     collectedResult.map(e => {
@@ -669,8 +670,11 @@ class DBTrademaker extends TrademakerFramework {
 //    for(r <- result){
 //      resultList = Cons[Prod[ImplementationType, MeasurementResultSetType]](r, resultList)
 //    }
-    println("====================================================")
-    println("====================================================")
+    if(isDebugOn){
+      println("====================================================")
+      println("====================================================")
+    }
+
     sc.stop()
     resultList
   }
@@ -682,6 +686,8 @@ class DBTrademaker extends TrademakerFramework {
     if (isDebugOn) {
       println("This is myParetoFilter function")
     }
+
+// TODO:    currently, we implemented pareto optimal filter in python
     list
   }
 
@@ -706,24 +712,25 @@ class DBTrademaker extends TrademakerFramework {
      * call smartbridge() function to synthesize formal implementations
      * scan solution folder to get implementations
      */
-    var specPath: String = fSpec.asInstanceOf[DBFormalSpecification].getSpec
-
-    var solFolder: String = specPath.substring(0, specPath.lastIndexOf("/"))
-    var alloyOMName = specPath.substring(specPath.lastIndexOf("/") + 1, specPath.lastIndexOf("."))
+    val specPath: String = fSpec.asInstanceOf[DBFormalSpecification].getSpec
+    var solFolder: String = specPath.substring(0, specPath.lastIndexOf(File.separator))
+    val alloyOMName = specPath.substring(specPath.lastIndexOf(File.separator) + 1, specPath.lastIndexOf("."))
     solFolder = solFolder + File.separator + alloyOMName + File.separator + "ImplSolution"
     recursiveDelete(new File(solFolder))
     if (!new File(solFolder).exists()) {
-      var fileFP = new File(solFolder)
+      val fileFP = new File(solFolder)
       val rtn = fileFP.mkdirs()
       if(rtn){
-        System.out.println("Solution folder created!:::"+solFolder);
+        println("Solution folder created!:::"+solFolder);
       } else {
-        System.out.println("Create solution folder failed!");
+        if(isDebugOn){
+          println("Create solution folder failed!");
+        }
       }
     }
 
     // get mapping run file
-    var mappingRun: String = FileOperation.getMappingRun(specPath)
+    val mappingRun: String = FileOperation.getMappingRun(specPath)
     // call smartBridge
     new SmartBridge(solFolder, mappingRun, AppConfig.getMaxSolForImpl.intValue());
     // delete mappingRun file
@@ -858,7 +865,6 @@ class DBTrademaker extends TrademakerFramework {
       var spec = objSpec.getSpecPath()
       spec = spec.substring(spec.lastIndexOf(File.separator), spec.indexOf("."))
       println("generate objects for: " + spec)
-      //      println("take time: " + TimeUnit.MILLISECONDS.toSeconds(interval) + "s")
     }
 
     var fAbsLoadSet: FormalAbstractLoadSet = new FormalAbstractLoadSet(insAbsLoad, selAbsLoad)
@@ -1815,7 +1821,7 @@ class DBTrademaker extends TrademakerFramework {
 
   def myIFunction(fImp: FormalImplementationType): ImplementationType = {
     if (isDebugOn) {
-      //println("This is myIFunction function")
+      println("This is myIFunction function")
     }
     /**
      * compute FormalImplementation schema name

@@ -142,8 +142,7 @@ public class DBConcreteMeasurementFunction implements Serializable{
 					System.out.println("DropDB: exit value = " + p.exitValue());
 				}
 			}
-			// delete the script
-//			new File(scriptFileName).delete();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {

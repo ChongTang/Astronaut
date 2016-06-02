@@ -35,12 +35,14 @@ class DBImplementation(path:String) extends Serializable { //extends FrameworkTy
   private var allFields: ArrayList[String] = null
   private var fieldsTable: ArrayList[CodeNamePair] = null
 
+
+  // this the reverse of "id" in implementation
+  private var reverseIDs: ArrayList[CodeNamePair] = null
+
   private var sigs: ArrayList[Sig] = null
   private var ids: ArrayList[String] = null
   private var associationsForCreateSchemas: ArrayList[String] = null
   private var typeMap: HashMap[String, String] = null
-  // this the reverse of "id" in implementation
-  private var reverseIDs: ArrayList[CodeNamePair] = null
 
   def setSigs(sigs: ArrayList[Sig]) = {
     this.sigs = sigs
