@@ -6,7 +6,7 @@ scalaVersion := "2.10.5"
 
 libraryDependencies += "org.jdom" % "jdom" % "2.0.2"
 
-libraryDependencies += "mysql" % "mysql-connector-java" % "6.0.2"
+libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.38"
 
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 

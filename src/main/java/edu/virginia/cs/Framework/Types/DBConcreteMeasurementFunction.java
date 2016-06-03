@@ -7,8 +7,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import edu.virginia.cs.AppConfig;
 import edu.virginia.cs.Evaluator.ScriptRunner;
@@ -68,11 +66,12 @@ public class DBConcreteMeasurementFunction implements Serializable{
 		String dbName = implPath.substring(
 				implPath.lastIndexOf(File.separator) + 1,
 				implPath.lastIndexOf("."));
+
+		String mysqlStat = "select table_schema, sum((data_length+index_length)/1024) AS KB from information_schema.tables where table_schema='"+dbName+"' group by 1;";
 		String[] command = new String[] {
 				"bash",
 				"-c",
-				this.mysqlCMD
-						+ " -Bse\"select table_schema, sum((data_length+index_length)/1024) AS KB from information_schema.tables group by 1;\"" };
+				this.mysqlCMD + " -Bse\""+mysqlStat+"\"" };
 		Process p;
 		try {
 			p = Runtime.getRuntime().exec(command);
@@ -92,7 +91,7 @@ public class DBConcreteMeasurementFunction implements Serializable{
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Get space consumption ERROR: "+e.getMessage());
 		}
 		return -1.0;
 	}
@@ -270,10 +269,9 @@ public class DBConcreteMeasurementFunction implements Serializable{
 			}
 			Connection conn;
 			try {
-				Class.forName("com.mysql.jdbc.Driver");
-				conn = DriverManager.getConnection("jdbc:mysql://localhost/"
-						+ dbName + "?user=" + mysqlUser + "&password="
-						+ mysqlPassword);
+//				Class.forName("com.mysql.jdbc.Driver");
+				String connStr = "jdbc:mysql://localhost/" + dbName + "?useSSL=false";
+				conn = DriverManager.getConnection(connStr, mysqlUser, mysqlPassword);
 				ScriptRunner runner = new ScriptRunner(conn, false, false);
 				InputStreamReader reader = new InputStreamReader(
 						new FileInputStream(insertPath));
@@ -287,9 +285,6 @@ public class DBConcreteMeasurementFunction implements Serializable{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -322,10 +317,10 @@ public class DBConcreteMeasurementFunction implements Serializable{
 			long startTime = System.currentTimeMillis();
 			Connection conn;
 			try {
-				Class.forName("com.mysql.jdbc.Driver");
+//				Class.forName("com.mysql.cj.jdbc.Driver");
 				conn = DriverManager.getConnection("jdbc:mysql://localhost/"
 						+ dbName + "?user=" + mysqlUser + "&password="
-						+ mysqlPassword);
+						+ mysqlPassword);//+"&autoReconnect=true&useSSL=false");
 				ScriptRunner runner = new ScriptRunner(conn, false, false);
 				InputStreamReader reader = new InputStreamReader(
 						new FileInputStream(selectPath));
@@ -339,9 +334,6 @@ public class DBConcreteMeasurementFunction implements Serializable{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}

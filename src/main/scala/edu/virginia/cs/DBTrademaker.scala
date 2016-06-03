@@ -1821,7 +1821,7 @@ class DBTrademaker extends AstronautFramework {
 
   def myIFunction(fImp: FormalImplementationType): ImplementationType = {
     if (isDebugOn) {
-      println("This is myIFunction function")
+//      println("This is myIFunction function")
     }
     /**
      * compute FormalImplementation schema name
