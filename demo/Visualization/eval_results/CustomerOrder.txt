@@ -1,0 +1,8 @@
+customerOrderObjectModel_Sol_7:63690.0:81373.0:26160.0
+customerOrderObjectModel_Sol_2:60012.0:82121.0:26160.0
+customerOrderObjectModel_Sol_11:88458.0:80554.0:32336.0
+customerOrderObjectModel_Sol_10:116174.0:118715.0:40560.0
+customerOrderObjectModel_Sol_8:115296.0:120475.0:40032.0
+customerOrderObjectModel_Sol_1:92310.0:122583.0:33856.0
+customerOrderObjectModel_Sol_5:97995.0:125544.0:34384.0
+customerOrderObjectModel_Sol_12:90818.0:79626.0:32336.0
