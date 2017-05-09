@@ -31,6 +31,25 @@ object AppConfig {
   private final val sparkMaster = params.getString("spark.master")
   private final val resultFile = params.getString("resultFile")
   private final var sparkSlaves: List[String] = params.getStringList("spark.slaves").toList
+  private final var testDB: String = params.getString("app.testDB")
+  private final val postgresUser: String = params.getString("postgres.user")
+  private final val postgresPassword: String = params.getString("postgres.password")
+
+  def getPostgresUser(): String = {
+    this.postgresUser
+  }
+
+  def getPostgresPassword(): String = {
+    this.postgresPassword
+  }
+
+  def getTestDB(): String = {
+    this.testDB
+  }
+
+  def setTestDB(testDB: String) {
+    this.testDB = testDB
+  }
 
   def setSpecList(list:List[String]) {
     this.specList = list

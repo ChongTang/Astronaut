@@ -495,6 +495,7 @@ public class SolveAlloyDM {
 				dbName = dbName
 						.substring(dbName.lastIndexOf(File.separator) + 1,
 								dbName.length());
+				// Chong: isMySQL
 				pw.println("USE " + dbName + ";");
 				this.insertPrintWriters.put(dbSchemaFile, pw);
 			} catch (IOException e) {
@@ -556,6 +557,7 @@ public class SolveAlloyDM {
 				dbName = dbName
 						.substring(dbName.lastIndexOf(File.separator) + 1,
 								dbName.length());
+				// Chong: isMySQL
 				pw.println("USE " + dbName + ";");
 				this.selectPrintWriters.put(dbSchemaFile, pw);
 			} catch (IOException e) {
@@ -730,6 +732,7 @@ public class SolveAlloyDM {
 				dbName = dbName
 						.substring(dbName.lastIndexOf(File.separator) + 1,
 								dbName.length());
+				// Chong: isMySQL
 				pw.println("USE " + dbName + ";");
 				this.insertPrintWriters.put(dbSchemaFile, pw);
 				// this.insertInstantPrintWriters.put(dbSchemaFile, pw1);
@@ -793,6 +796,7 @@ public class SolveAlloyDM {
 				dbName = dbName
 						.substring(dbName.lastIndexOf(File.separator) + 1,
 								dbName.length());
+				// Chong: isMySQL
 				pw.println("USE " + dbName + ";");
 				this.selectPrintWriters.put(dbSchemaFile, pw);
 				// this.updateInstantPrintWriters.put(dbSchemaFile, pw1);

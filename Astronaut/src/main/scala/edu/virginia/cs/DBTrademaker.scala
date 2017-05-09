@@ -291,34 +291,43 @@ class DBTrademaker extends AstronautFramework {
       insertFile.createNewFile()
     }
 
-    var insertPw: PrintWriter = new PrintWriter(new FileWriter(insertPath, true))
-    insertPw.println("USE " + implFileName + ";")
+    val insertPw: PrintWriter = new PrintWriter(new FileWriter(insertPath, true))
+    if(AppConfig.getTestDB().equalsIgnoreCase("mysql")) {
+      insertPw.println("USE " + implFileName + ";")
+    } else if(AppConfig.getTestDB().equalsIgnoreCase("postgres")) {
+      insertPw.println("BEGIN;")
+    }
     var allInsertStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]()
-    var printOrder = PrintOrder.getOutPutOrders(pathBase)
     for (elem <- insCL.getQuerySet()) {
-      var sq = elem.getSq()
-      var sqInOneObject = sq.getInsertStmtsInOneObject()
+      val sq = elem.getSq()
+      val sqInOneObject = sq.getInsertStmtsInOneObject()
       allInsertStmts.add(sqInOneObject)
     }
 
+    val printOrder = PrintOrder.getOutPutOrders(pathBase)
     for (s <- printOrder) {
       for (insertS <- allInsertStmts) {
         val mapIt = insertS.iterator
         while (mapIt.hasNext) {
-          val elem = mapIt.next // (String, HashMap[Integer, String]) = (tableName, HashMap[ID, Statements])
-          if (elem._1.equalsIgnoreCase(s)) {
-            val tmp = elem._2
-            val tmpIt = tmp.iterator
-            while (tmpIt.hasNext) {
-              val stmt = tmpIt.next
-              insertPw.println(stmt._2)
+          val table = mapIt.next // (String, HashMap[Integer, String]) = (tableName, HashMap[ID, Statements])
+          if (table._1.equalsIgnoreCase(s)) { // check table name
+            val stmt = table._2
+            val stmtIt = stmt.iterator
+            while (stmtIt.hasNext) {
+              val idStmt = stmtIt.next
+              val stmtStr:String =  String.valueOf(idStmt._2.toCharArray())
+              insertPw.println(stmtStr)
             }
+            insertPw.flush()
           }
         }
       }
     }
 
     insCL.setInsertPath(insertPath)
+    if(AppConfig.getTestDB().equalsIgnoreCase("postgres")) {
+      insertPw.println("COMMIT;")
+    }
     insertPw.flush()
     insertPw.close()
 
@@ -364,7 +373,9 @@ class DBTrademaker extends AstronautFramework {
     }
 
     val selectPw: PrintWriter = new PrintWriter(new FileWriter(selectPath, true))
-    selectPw.println("USE " + implFileName + ";")
+    if (AppConfig.getTestDB().equalsIgnoreCase("mysql")) {
+      selectPw.println("USE " + implFileName + ";")
+    }
     val allSelectStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]()
 
     for (elem <- selCL.getQuerySet()) {
@@ -373,7 +384,7 @@ class DBTrademaker extends AstronautFramework {
       allSelectStmts.add(sqInOneObject)
     }
 
-    for (s <- printOrder) {
+    for (s:String <- printOrder) {
       for (selectS <- allSelectStmts) {
         val mapIt = selectS.iterator
         while (mapIt.hasNext) {
@@ -383,8 +394,10 @@ class DBTrademaker extends AstronautFramework {
             val tmpIt = tmp.iterator
             while (tmpIt.hasNext) {
               val stmt = tmpIt.next
-              selectPw.println(stmt._2)
+              val stmtStr = String.valueOf(stmt._2.toCharArray())
+              selectPw.println(stmtStr)
             }
+            selectPw.flush()
           }
         }
       }
@@ -483,7 +496,7 @@ class DBTrademaker extends AstronautFramework {
     var mfs = snd(prod).asInstanceOf[DBConcreteMeasurementFunctionSet]
     mfs.setImpl(impl)
 
-    // Chong: if benchmark is random test loads, need to create concrete load first and then run them
+    // If benchmark is random test loads, need to create concrete load first and then run them
     if (AppConfig.getIsRandom() == 1) {
       // call concrete loads creator here
       var timeLoads: ArrayList[ConcreteLoad] = new ArrayList[ConcreteLoad](2)
@@ -498,10 +511,8 @@ class DBTrademaker extends AstronautFramework {
       mfs.getCsmf().setLoads(spaceLoads)
     }
 
-    /**
-     * Spark cannot be used here
-     * I will use multithread and JDBC to execute on remote machines
-     */
+    // wait for a while to collect since test suite transfer might require sometime
+
 
     /**
      * iterate all measurement function set to get insert and select script file
@@ -767,8 +778,8 @@ class DBTrademaker extends AstronautFramework {
 
   def myLFunction(fSpec: FormalSpecificationType): FormalAbstractMeasurementFunctionSet = {
     // generate two abstract load objects:  insert and select
-    // create two measurement functions, one for time, one for space 
-    // wrap them in a FormalAbstractMeasurementFunctionSet 
+    // create two measurement functions, one for time, one for space
+    // wrap them in a FormalAbstractMeasurementFunctionSet
 
     var absLoads: FormalAbstractLoadSet = null
 
@@ -805,10 +816,10 @@ class DBTrademaker extends AstronautFramework {
     // initialize two empty abstract loads objects, to contain insert and select queries
     // for each object solution to fSpec
     //     - generate abstract insert and select queries,
-    //			and add them to the corresponding abstract load objects 
+    //			and add them to the corresponding abstract load objects
     // package up the two abstract load objects in a FormalAbstractLoadSet object and return the result
 
-    // initialize two empty abstract loads objects, to contain insert and select queries    
+    // initialize two empty abstract loads objects, to contain insert and select queries
     var insAbsLoad = new AbstractLoad()
     var selAbsLoad = new AbstractLoad()
 
@@ -832,7 +843,7 @@ class DBTrademaker extends AstronautFramework {
 
     /*
      * get solutions to alloy spec (stored as XML files)
-     * 
+     *
      * for each such solution ("object")
      *    * generate two abstract queries
      *    * add queries to relevant abstract load objects
@@ -927,9 +938,11 @@ class DBTrademaker extends AstronautFramework {
       insertFile.createNewFile()
     }
     var insertPw: PrintWriter = new PrintWriter(insertFile)
-    insertPw.println("USE " + implFileName + ";")
+    if(AppConfig.getTestDB().equalsIgnoreCase("mysql")) {
+      insertPw.println("USE " + implFileName + ";")
+    }
     var allInsertStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]();
-    var printOrder = PrintOrder.getOutPutOrders(pathBase)
+    val printOrder = PrintOrder.getOutPutOrders(pathBase)
     for (elem <- insCL.getQuerySet()) {
       var sq = elem.getSq()
       var sqInOneObject = sq.getInsertStmtsInOneObject()
@@ -982,7 +995,9 @@ class DBTrademaker extends AstronautFramework {
       selectFile.createNewFile()
     }
     var selectPw: PrintWriter = new PrintWriter(selectFile)
-    selectPw.println("USE " + implFileName + ";")
+    if(AppConfig.getTestDB().equalsIgnoreCase("mysql")) {
+      selectPw.println("USE " + implFileName + ";")
+    }
     var allSelectStmts = new ArrayList[HashMap[String, HashMap[Integer, String]]]();
     for (elem <- selCL.getQuerySet()) {
       var sq = elem.getSq()
@@ -1126,7 +1141,7 @@ class DBTrademaker extends AstronautFramework {
         if (goToTable != null) {
           /* there is no t_association information for this element
            * which indicates it's an one-to-many association,
-           * and the information is in dst table, 
+           * and the information is in dst table,
            * we don't need to consider since it will be taken in find foreign key value
            */
           var id: String = getPrimaryKeyByTableName(dbScheme, goToTable)
@@ -1167,18 +1182,22 @@ class DBTrademaker extends AstronautFramework {
                   // find out where this field come from, by iterating all signatures in OM
                   var foreignClass: String = getClassByAttr(impl, fieldName)
                   var fieldValue: String = getForeignValue(allInstances, foreignClass, fieldName, impl.getTypeMap())
-                  field_part += "`" + fieldName + "`,"
+//                  field_part += "`" + fieldName + "`,"
+                  field_part += fieldName + ","
                   value_part += fieldValue + ","
                 }
               }
 
               if (fieldInAttr || fieldIsID) {
                 var fieldValue = getFieldValue(fieldValuePairs, fieldName, impl.getTypeMap())
-                field_part += "`" + fieldName + "`,"
+//                field_part += "`" + fieldName + "`,"
+                field_part += fieldName + ","
                 value_part += fieldValue + ","
               } else if (fieldName.equalsIgnoreCase("DType")) {
                 var fieldValue = "'" + className + "'"
-                field_part += "`" + fieldName + "`,"
+//                field_part += "`" + fieldName + "`,"
+//                var fieldValue = className
+                field_part += fieldName + ","
                 value_part += fieldValue + ","
               } else if (isFKey) {
                 // the fieldName is a foreign key
@@ -1188,7 +1207,8 @@ class DBTrademaker extends AstronautFramework {
                 var primaryClass = getPrimaryClassById(impl, fieldName)
                 // the next step is to get the primary key value of primaryClass
                 var pKeyValue = getForeignKeyValue(allInstances, primaryClass, fieldName)
-                field_part += "`" + fieldName + "`,"
+//                field_part += "`" + fieldName + "`,"
+                field_part += fieldName + ","
                 value_part += pKeyValue + ","
               }
             }
@@ -1198,14 +1218,16 @@ class DBTrademaker extends AstronautFramework {
             for (pair <- allAboutSchema if pair.getFirst().equalsIgnoreCase("fields")) {
               var keyName = pair.getSecond
               var keyValue = getFieldValue(fieldValuePairs, keyName, impl.getTypeMap())
-              field_part += "`" + keyName + "`,"
+//              field_part += "`" + keyName + "`,"
+              field_part += keyName + ","
               value_part += keyValue + ","
             }
           }
 
           field_part = field_part.substring(0, field_part.length() - 1)
           value_part = value_part.substring(0, value_part.length() - 1)
-          var stmt: String = "INSERT INTO `" + goToTable + "` (" + field_part + ") VALUES (" + value_part + ");"
+//          var stmt: String = "INSERT INTO `" + goToTable + "` (" + field_part + ") VALUES (" + value_part + ");"
+          var stmt: String = "INSERT INTO " + goToTable + " (" + field_part + ") VALUES (" + value_part + ");"
           //          stmt += "FLUSH TABLES;";
           // add statments
           if (!dataSchemaHasInsertStatement(allInsertStmts, goToTable, Integer.valueOf(id_value))) {
@@ -1299,7 +1321,7 @@ class DBTrademaker extends AstronautFramework {
     for (pair <- impl.getReverseIDs) {
       if (pair.getFirst.equalsIgnoreCase(field)) {
         // iterate attrSet
-        // check ID is in attr 
+        // check ID is in attr
         for (attr <- impl.getDataProvider().getAttrByTableName(pair.getSecond)) {
           if (attr.equalsIgnoreCase(field)) {
             return pair.getSecond
@@ -1331,39 +1353,6 @@ class DBTrademaker extends AstronautFramework {
     // default null
     null
   }
-
-  //  def hasInsertStmt(stmts:ArrayList[Tuple2[String, ArrayList[Tuple2[Integer, String]]]], tableName: String, idValue: Integer):Boolean = {
-  //    for(table <- stmts){
-  //      if(table._1.equalsIgnoreCase(tableName)){
-  //        var stmtsInTable = table._2 
-  //        for(stmt <- stmtsInTable){
-  //          if(stmt._1 == idValue){
-  //            return true
-  //          }
-  //        }
-  //      }
-  //    }
-  //    false
-  //  }
-  //  
-  //  def addInsertStmt(stmts:ArrayList[Tuple2[String, ArrayList[Tuple2[Integer, String]]]], tableName: String, idValue: Integer, stmt: String) = {
-  //    var tableSize = stmts.size()
-  //    var hasTable = false
-  //    //check if table exists
-  //    for(i <- 0 to tableSize){
-  //      if(stmts(i)._1.equalsIgnoreCase(tableName)){
-  //        hasTable = true
-  //      }
-  //      
-  //    }
-  //    if(hasTable == false){ // table doesn't exists, add new table
-  //      var newList = new ArrayList[Tuple2[Integer, String]]()
-  //      newList.add(new Tuple2[Integer, String](idValue, stmt))
-  //      stmts.add(new Tuple2[String, ArrayList[Tuple2[Integer, String]]](tableName, newList))
-  //    } else {
-  //      stmts.get
-  //    }
-  //  }
 
   def addInsertStmtIntoDataSchema(allInserts: HashMap[String, HashMap[Integer, String]],
     goToTable: String, stmt: String, idValue: Integer) = {
@@ -1508,7 +1497,7 @@ class DBTrademaker extends AstronautFramework {
           //case "Real" =>
           case "Bool" => "0"
           //var tmpValue = -1
-          //                         if(tmp.equalsIgnoreCase("True")) 
+          //                         if(tmp.equalsIgnoreCase("True"))
           //                            tmpValue = 1
           //                         else tmpValue = 0
           //                         String.valueOf(tmpValue)
@@ -1629,26 +1618,32 @@ class DBTrademaker extends AstronautFramework {
           var parent = getParent(impl.getSigs, element)
           if (parent == null) { // element is a root class
             var allAboutOMClass: ArrayList[CodeNamePair] = dbScheme.get(goToTable)
-            fromPart += "`" + element + "`"
+//            fromPart += "`" + element + "`"
+            fromPart += element
             for (pair <- allAboutOMClass if pair.getFirst.equalsIgnoreCase("fields")) {
               var fieldName = pair.getSecond()
-              selectPart += "`" + element + "`.`" + fieldName + "`,"
+//              selectPart += "`" + element + "`.`" + fieldName + "`,"
+              selectPart += element + "." + fieldName + ","
               if (isPrimaryKeys(impl.getPrimaryKeys, element, fieldName)) {
                 val value = getFieldValue(fieldValuePairs, fieldName, impl.getTypeMap())
-                wherePart += "`" + element + "`.`" + fieldName + "`=" + value + " AND "
+//                wherePart += "`" + element + "`.`" + fieldName + "`=" + value + " AND "
+                wherePart += element + "." + fieldName + "=" + value + " AND "
               }
             }
           } else if (!goToTable.equalsIgnoreCase(element)) { // class C is mapped to the same table as its super class
 
           } else if (goToTable.equalsIgnoreCase(element)) { // class C is mapped to its own table
-            fromPart += "`" + goToTable + "`";
+//            fromPart += "`" + goToTable + "`";
+            fromPart += goToTable;
             var allAboutOMClass: ArrayList[CodeNamePair] = dbScheme.get(goToTable)
             for (pair <- allAboutOMClass if pair.getFirst().equalsIgnoreCase("fields")) {
               var fieldName = pair.getSecond()
-              selectPart += "`" + element + "`.`" + fieldName + "`,";
+//              selectPart += "`" + element + "`.`" + fieldName + "`,";
+              selectPart += element + "." + fieldName + ",";
               if (isPrimaryKeys(impl.getPrimaryKeys, element, fieldName)) {
                 val value = getFieldValue(fieldValuePairs, fieldName, impl.getTypeMap())
-                wherePart += "`" + element + "`.`" + fieldName + "`=" + value + " AND ";
+//                wherePart += "`" + element + "`.`" + fieldName + "`=" + value + " AND ";
+                wherePart += element + "." + fieldName + "=" + value + " AND ";
               }
             }
           }
@@ -1685,43 +1680,6 @@ class DBTrademaker extends AstronautFramework {
     }
     allStmts.get(tableName).put(idValue, stmt)
   }
-
-  //  def genObjects(objSpec: ObjectSpec): ObjectSet = {
-  //    /**
-  //     * get the path of object specification
-  //     * construct solution folder
-  //     * prepare environment for alloy analyzer
-  //     * call alloy analyzer
-  //     * write solution into xml files
-  //     * scan the solution folder and get the path of solutions
-  //     */
-  //
-  //    var specPath = objSpec.getSpecPath()
-  //    var lenOfExtension = "_dm.als".length()
-  //    var objectSolFolder = specPath.substring(0, specPath.length() - lenOfExtension)
-  //    //    var specName = specPath.substring(specPath.lastIndexOf(File.separator) + 1, specPath.indexOf("_"))
-  //    objectSolFolder = objectSolFolder + File.separator + "TestSolutions"
-  //    recursiveDelete(new File(objectSolFolder))
-  //    if (!new File(objectSolFolder).exists()) {
-  //      new File(objectSolFolder).mkdirs()
-  //    }
-  //
-  //    // call objects generator
-  //    var loadSynthesizer = new LoadSynthesizer()
-  //    loadSynthesizer.genObjects(specPath, objectSolFolder)
-  //
-  //    // scan solution folder to get objects' path
-  //    var objectFiles: Array[File] = new java.io.File(objectSolFolder).listFiles.filter(_.getName.endsWith(".xml"))
-  //    var file: File = null
-  //    var objects: ObjectSet = new ObjectSet()
-  //
-  //    for (file <- objectFiles) {
-  //      var objectFileName = file.getName()
-  //      var singleObject = new ObjectOfDM(file.getAbsolutePath())
-  //      objects.getObjSet().add(singleObject)
-  //    }
-  //    objects
-  //  }
 
   def genObjSpec(fSpec: FormalSpecificationType): ObjectSpec = {
     if (isDebugOn) {

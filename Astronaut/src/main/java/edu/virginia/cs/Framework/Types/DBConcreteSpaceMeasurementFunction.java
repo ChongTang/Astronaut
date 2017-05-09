@@ -15,14 +15,9 @@ public class DBConcreteSpaceMeasurementFunction extends DBConcreteMeasurementFun
 	
 	public DBSpaceMeasurementResult run(){
 		// run insert only, and check the space consumption
-//		dropDB();
-//		createDB();
-//		createTables();
-//		runInsert();
-		double spaceConsumption = checkSpace();
+		double spaceConsumption = super.mfByDB.checkSpace();
 		// drop database after test
-//		Chong:
-		dropDB();
+		super.mfByDB.dropDB();
 		DBSpaceMeasurementResult dbSMR = new DBSpaceMeasurementResult(spaceConsumption);
 		return dbSMR;
 	}

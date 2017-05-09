@@ -4,6 +4,8 @@ import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
+import edu.virginia.cs.AppConfig;
+import scala.App;
 
 /**
  * Created by IntelliJ IDEA. User: ct4ew Date: 7/23/13 Time: 3:53 PM To change
@@ -538,7 +540,165 @@ public class DataProvider implements Serializable{
 				.println("=================================================\n\n");
 	}
 
-	public boolean writeIntoFile(String filename) throws IOException {
+	public boolean writeIntoFile(String filename) throws  IOException {
+		String testDB = AppConfig.getTestDB().trim();
+		if(testDB.equalsIgnoreCase("mysql")){
+			return writeIntoFileMySQL(filename);
+		} else if(testDB.equalsIgnoreCase("postgres")) {
+			return writeIntoFilePostgreSQL(filename);
+		}
+		return false;
+	}
+
+	public boolean writeIntoFilePostgreSQL(String filename) throws  IOException {
+		ArrayList<String> errorTable = new ArrayList(); // for debug
+		File sqlFile;
+		sqlFile = new File(filename);
+		FileOutputStream oFile;
+		PrintStream pPRINT = null;
+		if (!sqlFile.exists()) {
+			sqlFile.createNewFile();
+		}
+		oFile = new FileOutputStream(sqlFile, false);
+		pPRINT = new PrintStream(oFile);
+		pPRINT.println("-- CREATE DATABASE FOR " + filename + "\n");
+		String dbName = sqlFile.getName();
+		dbName = dbName.substring(0, dbName.length() - 4);
+
+		String tableName = null;
+
+		int PKNum = 0;
+		int FKNum = 0;
+		ArrayList<String> foreignKeyList = new ArrayList();
+		Set<Map.Entry<String, ArrayList<CodeNamePair>>> entrySet = this.tableItems
+				.entrySet();
+		// iterate all tables
+		for (Map.Entry<String, ArrayList<CodeNamePair>> entry : entrySet) {
+			tableName = entry.getKey();
+			ArrayList<String> primaryKeys = getPrimaryKey(tableName);
+			if (primaryKeys.size() == 0) {
+				continue;
+			}
+			// get the number of primary keys and foreign keys
+			PKNum = hasMultipleItem(tableName, "primaryKey");
+			FKNum = hasMultipleItem(tableName, "foreignKey");
+
+			pPRINT.println("--");
+			pPRINT.println("-- Table structure for table " + tableName);
+			pPRINT.println("--" + "\n");
+
+			pPRINT.println("CREATE TABLE " + tableName + " (");
+			ArrayList<CodeNamePair> tableItems = entry.getValue();
+			int arraySize = tableItems.size();
+			boolean firstPK = true;
+
+			// primaryKeyStr will write to file at the end of every create table
+			// block
+			String primaryKeyStr = new String("PRIMARY KEY (");
+			// foreignKeyStr will write to file at the end of file
+			String foreignKeyStr = new String("ALTER TABLE " + tableName
+					+ "\n");
+			int lastFKCounter = 0;
+			// iterate all items of every table
+			for (int i = 0; i < arraySize; i++) {
+				// the itemName is the name of this item, like customerID,
+				// orderID
+				String itemName = tableItems.get(i).getSecond().toString();
+				// if(itemName.contains("$")){
+				// itemName = itemName.split("$")[0];
+				// }
+				// itemType is the type of the item, for example, the type of
+				// customerID is Ineteger
+				String itemType = getTypesByName(itemName);
+				if (itemType == null) {
+					itemType = "NULL";
+					errorTable.add(tableName + itemName + itemType);
+				}
+				if (itemType.equalsIgnoreCase("Integer")) {
+					itemType = "int";
+				} else if (itemType.equalsIgnoreCase("Real")) {
+					itemType = "decimal(20,5)";
+				} else if (itemType.equalsIgnoreCase("string")) {
+					itemType = "varchar(64)";
+				} else if (itemType.equalsIgnoreCase("class")) {
+					itemType = "longblob";
+				} else if (itemType.equalsIgnoreCase("DType")) {
+					itemType = "varchar(64)";
+				} else if (itemType.equalsIgnoreCase("Bool")) {
+					itemType = "boolean"; // boolean is tinyint in mysql
+				} else if (itemType.equalsIgnoreCase("Longblob")) {
+					itemType = "Longblob";
+				} else if (itemType.equalsIgnoreCase("Time")) {
+					itemType = "TIMESTAMP";
+				}
+
+				String caseName = tableItems.get(i).getFirst().toString();
+				if (caseName.equalsIgnoreCase("fields")) {
+					String postfix = isID(itemName, tableName) ? " NOT NULL, \n"
+							: ",\n";
+					pPRINT.print(itemName + " " + itemType + postfix);
+				} else if (caseName.equalsIgnoreCase("primaryKey")) {
+					if (PKNum > 1) {
+						if (firstPK) {
+							primaryKeyStr = primaryKeyStr + itemName;
+							firstPK = false;
+						} else {
+							primaryKeyStr = primaryKeyStr + "," + itemName
+									+ ")";
+						}
+					} else {
+						primaryKeyStr = "PRIMARY KEY (" + itemName + ")";
+					}
+				} else if (caseName.equalsIgnoreCase("foreignKey")) {
+					// add constrains for ths table
+					// find the primary tablename
+					String pkTable = tableNameByID(itemName);
+					if (1 == FKNum) {
+						foreignKeyStr = foreignKeyStr + "  ADD CONSTRAINT FK_"
+								+ tableName + "_" + itemName + " "
+								+ "FOREIGN KEY (" + itemName
+								+ ") REFERENCES " + pkTable + " ("
+								+ itemName + ") "
+								+ "ON DELETE CASCADE ON UPDATE CASCADE;\n";
+					} else if (FKNum > 1) {
+						lastFKCounter++;
+						if (lastFKCounter < FKNum) {
+							foreignKeyStr = foreignKeyStr
+									+ "  ADD CONSTRAINT FK_" + tableName + "_"
+									+ itemName + " FOREIGN KEY ("
+									+ itemName + ") REFERENCES " + pkTable
+									+ " (" + itemName + ") "
+									+ "ON DELETE CASCADE ON UPDATE CASCADE,\n";
+						} else if (lastFKCounter >= FKNum) {
+							foreignKeyStr = foreignKeyStr
+									+ "  ADD CONSTRAINT FK_" + tableName + "_"
+									+ itemName + " FOREIGN KEY ("
+									+ itemName + ") REFERENCES" + pkTable
+									+ " (" + itemName + ") "
+									+ "ON DELETE CASCADE ON UPDATE CASCADE;\n";
+						}
+					}
+				}
+			}
+			pPRINT.println(primaryKeyStr);
+			pPRINT.println(");" + "\n");
+			if (FKNum > 0) {
+				foreignKeyList.add(foreignKeyStr);
+			}
+		}
+
+		// ====================
+		// output foreignKeyStr here
+		// ====================
+		for (int i = 0; i < foreignKeyList.size(); i++) {
+			pPRINT.println(foreignKeyList.get(i));
+		}
+
+		pPRINT.close();
+		return true;
+	}
+
+	public boolean writeIntoFileMySQL(String filename) throws IOException {
 		ArrayList<String> errorTable = new ArrayList(); // for debug
 		File sqlFile;
 		sqlFile = new File(filename);
@@ -689,214 +849,5 @@ public class DataProvider implements Serializable{
 
 		pPRINT.close();
 		return true;
-	}
-
-	public void insertGen(String path) throws IOException {
-		String pattern = Pattern.quote(System.getProperty("file.separator"));
-		String[] paths = path.split(pattern);
-		String tmpFileName = paths[paths.length - 1];
-		if (tmpFileName.contains("Customer")) {
-			this.orders.add("Customer");
-			this.orders.add("PreferredCustomer");
-			this.orders.add("Order");
-			this.orders.add("CustomerOrderAssociation");
-		} else if (tmpFileName.contains("CSOS")) {
-			// ======================== CSOS
-			this.orders.add("Channel");
-			this.orders.add("Principal");
-			this.orders.add("Role");
-			this.orders.add("ProcessStateMachine");
-			this.orders.add("ProcessStateMachineState");
-			this.orders.add("ProcessStateMachineAction");
-			this.orders.add("ProcessStateMachineEvent");
-			this.orders.add("ProcessStateMachineTransition");
-			this.orders.add("ProcessStateMachineExecution");
-			this.orders.add("EmailChannel");
-			this.orders.add("SMSChannel");
-			this.orders.add("ProcessQueryResponse");
-			this.orders.add("ProcessQueryResponseAction");
-			this.orders.add("ProcessQueryResponseExecution");
-			this.orders.add("PrincipalProxy");
-			this.orders.add("PrincipalRole");
-			this.orders.add("MachineStates");
-			this.orders.add("TerminalStates");
-			this.orders.add("StateMachineEvents");
-			this.orders.add("StateMachineTransitions");
-		} else if (tmpFileName.contains("ecommerce")) {
-			// ================================== ecommerce
-			this.orders.add("Customer");
-			this.orders.add("Order");
-			this.orders.add("ShippingCart");
-			this.orders.add("Item");
-			this.orders.add("Category");
-			this.orders.add("Catalog");
-			this.orders.add("Product");
-			this.orders.add("CartItem");
-			this.orders.add("OrderItem");
-			this.orders.add("PhysicalProduct");
-			this.orders.add("ElectronicProduct");
-			this.orders.add("Service");
-			this.orders.add("Media");
-			this.orders.add("Documents");
-			this.orders.add("CustomerOrderAssociation");
-			this.orders.add("CustomerShippingCartAssociation");
-			this.orders.add("ShippingCartItemAssociation");
-			this.orders.add("OrderItemAssociation");
-			this.orders.add("ProductCategoryAssociation");
-			this.orders.add("ProductCatalogAssociation");
-			this.orders.add("ProductItemAssociation");
-			this.orders.add("ProductAssetAssociation");
-		} else if (tmpFileName.contains("decider")) {
-			// //////======================decider
-			this.orders.add("User");
-			this.orders.add("NameSpace");
-			this.orders.add("Variable");
-			this.orders.add("Relationship");
-			this.orders.add("Role");
-			this.orders.add("Cluster");
-			this.orders.add("DecisionSpace");
-			this.orders.add("roleBindings");
-			this.orders.add("Participants");
-			this.orders.add("DSN");
-			this.orders.add("NameSpaceOwnerAssociation");
-			this.orders.add("varInAssociation");
-			this.orders.add("varOutAssociation");
-			this.orders.add("clusterVariableAssociation");
-			this.orders.add("userDecisionSpaceAssociation");
-			this.orders.add("descisionSpaceRoleBindingsAssociation");
-			this.orders.add("descisionSpaceParticipantsAssociation");
-			this.orders.add("descisionSpaceVariablesAssociation");
-			this.orders.add("descisionSpaceRoleAssociation");
-			this.orders.add("descisionSpaceUserAssociation");
-			this.orders.add("DSNUserAssociation");
-			this.orders.add("DSNNamespaceAssociation");
-			this.orders.add("DSNDecisionSpaceAssociation");
-		}
-
-		long start = System.currentTimeMillis();
-		String modulePath = path.split("\\.")[0]; // delete file extension
-		// String tmp[] = modulePath.split("\\\\");
-		String tmp[] = modulePath.split(pattern);
-		String moduleName = tmp[tmp.length - 1];
-		int path_len = tmp.length;
-		String tmp_path = "";
-		for (int i = 0; i < path_len - 1; i++) {
-			// tmp_path += tmp[i] + "\\";
-			tmp_path += tmp[i] + File.separator;
-		}
-		// tmp_path += "Inserts\\" + moduleName;
-		tmp_path += "Inserts" + File.separator + moduleName;
-		modulePath = tmp_path;
-		String fileName = modulePath + "_insert_r.sql";
-		int num_tables = this.tableItems.size();
-		Integer IDs[] = new Integer[num_tables];
-		File moduleFile = new File(fileName);
-		FileOutputStream oFile;
-		PrintStream pFile;
-		if (!moduleFile.exists()) {
-			moduleFile.createNewFile();
-		}
-
-		ArrayList<String> forShow = new ArrayList<String>();
-		oFile = new FileOutputStream(moduleFile, false);
-		pFile = new PrintStream(oFile);
-		int rows = 100000;
-		// initialize primaryKey array
-		for (int i = 0; i < num_tables; i++) {
-			IDs[i] = 0;
-		}
-		int which_table = 0;
-		Set<Map.Entry<String, ArrayList<CodeNamePair>>> entrySet = this.tableItems
-				.entrySet();
-		Random random_gen = new Random(System.currentTimeMillis());
-
-		for (Map.Entry<String, ArrayList<CodeNamePair>> entry : entrySet) {
-			String tableName = entry.getKey();
-			ArrayList<CodeNamePair> items = entry.getValue();
-			ArrayList<String> pKeys = getPrimaryKey(tableName);
-			if (pKeys.size() == 0) {
-				continue;
-			}
-			int rows_for_one_table = 0;
-			while (rows_for_one_table++ < rows) {
-				String columnNames = "";
-				String values = "";
-				for (CodeNamePair pair : items) {
-					String first = pair.getFirst().toString();
-					String second = pair.getSecond().toString();
-					if (!first.equalsIgnoreCase("fields")) {
-						continue;
-					}
-					columnNames += second + ",";
-					if (isID(second, tableName)) {
-						IDs[which_table]++;
-						values += IDs[which_table] + ",";
-						continue;
-					}
-
-					String itemType = getTypesByName(second);
-					// Chong: needs to revise
-					if (itemType.equalsIgnoreCase("Integer")) {
-						itemType = "Int";
-						int tmp_int = random_gen.nextInt(60000);
-						if (isForeignKey(tableName, second)) {
-							tmp_int = tmp_int % rows;
-						}
-						values += String.valueOf(tmp_int) + ",";
-					} else if (itemType.equalsIgnoreCase("Real")) {
-						// itemType = "decimal(5,0)";
-						itemType = "Int";
-						float tmp_float = random_gen.nextFloat();
-						values += String.valueOf(tmp_float) + ",";
-					} else if (itemType.equalsIgnoreCase("string")) {
-						itemType = "string";
-						String randomString = UUID.randomUUID().toString();
-						values += randomString + ",";
-					} else if (itemType.equalsIgnoreCase("class")) {
-						itemType = "longblob";
-					} else if (itemType.equalsIgnoreCase("DType")) {
-						// itemType = "varchar(31)";
-						itemType = "string";
-						String randomString = tableName;
-						values += randomString + ",";
-					} else if (itemType.equalsIgnoreCase("Bool")) {
-						itemType = "boolean"; // boolean is tinuint in mysql
-						String randomString = "TRUE";
-						values += randomString + ",";
-					} else if (itemType.equalsIgnoreCase("Longblob")) {
-						itemType = "Longblob"; // boolean is tinuint in mysql
-					} else if (itemType.equalsIgnoreCase("Time")) {
-						itemType = "TIMESTAMP"; // boolean is tinuint in mysql
-					}
-				}
-				columnNames = columnNames
-						.substring(0, columnNames.length() - 1);
-				values = values.substring(0, values.length() - 1);
-				String statement = "INSERT INTO `" + tableName + "` ("
-						+ columnNames + ") VALUES (" + values + ");";
-				if (!this.allStmts.containsKey(tableName)) {
-					this.allStmts.put(tableName, new ArrayList<String>());
-				}
-				this.allStmts.get(tableName).add(statement);
-				// pFile.println(statement);
-			}
-			which_table++;
-		}
-		for (String s : this.orders) {
-			if (!this.allStmts.containsKey(s)) {
-				continue;
-			}
-			ArrayList<String> stmts = this.allStmts.get(s);
-			for (String stmt : stmts) {
-				pFile.println(stmt);
-			}
-		}
-		long end = System.currentTimeMillis();
-		long elapsed = end - start;
-		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		pFile.println(sdf.format(new Date(elapsed)));
-		oFile.close();
-		pFile.close();
 	}
 }

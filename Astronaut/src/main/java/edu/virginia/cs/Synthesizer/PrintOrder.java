@@ -4,20 +4,17 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 public class PrintOrder implements Serializable{
-
-	private static ArrayList<String> printOrder = new ArrayList<String>();
-
 	public static ArrayList<String> getOutPutOrders(String instFile) {
-		printOrder.clear();
+		ArrayList<String> printOrder = new ArrayList<String>();
+//		printOrder.clear();
 		String fileName = instFile.toLowerCase();
 
-		if (fileName.contains("customer")) {
+		if (fileName.contains("customerorder")) {
 			printOrder.add("Customer");
 			printOrder.add("PreferredCustomer");
 			printOrder.add("GoldenCustomer");
-			printOrder.add("Order");
+			printOrder.add("OOrder");
 			printOrder.add("CustomerOrderAssociation");
-
 		} else if (fileName.contains("csos")) {
 			printOrder.add("Principal");
 			printOrder.add("Channel");
@@ -39,12 +36,12 @@ public class PrintOrder implements Serializable{
 			printOrder.add("StateMachineTransitions");
 		} else if (fileName.contains("ecommerce")) {
 			printOrder.add("Customer");
-			printOrder.add("Order");
+			printOrder.add("OOrder");
 			printOrder.add("ShippingCart");
 			printOrder.add("Item");
 			printOrder.add("Product");
 			printOrder.add("Category");
-			printOrder.add("Catalog");
+			printOrder.add("CCatalog");
 			printOrder.add("Asset");
 			printOrder.add("CartItem");
 			printOrder.add("OrderItem");
@@ -65,11 +62,11 @@ public class PrintOrder implements Serializable{
 		} else if (fileName.contains("decider")) {
 			printOrder.add("DecisionSpace");
 			printOrder.add("NameSpace");
-			printOrder.add("Variable");
+			printOrder.add("VVariable");
 			printOrder.add("Relationship");
-			printOrder.add("Role");
+			printOrder.add("RRole");
 			printOrder.add("Participant");
-			printOrder.add("User");
+			printOrder.add("UUser");
 			printOrder.add("Viewer");
 			printOrder.add("Developer");
 			printOrder.add("varAssociation");
@@ -128,8 +125,8 @@ public class PrintOrder implements Serializable{
 			printOrder.add("TestOrderAssociation");
 
 		} else if(fileName.contains("flagship")){
-            printOrder.add("User");
-            printOrder.add("Group");
+            printOrder.add("UUser");
+            printOrder.add("GGroup");
             printOrder.add("Background");
             printOrder.add("Category");
             printOrder.add("Document");

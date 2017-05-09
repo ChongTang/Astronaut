@@ -15,12 +15,19 @@ public class DBConcreteTimeMeasurementFunction extends DBConcreteMeasurementFunc
 	
 	public DBTimeMeasurementResult run(){
 		System.out.println("Run functions in DBConcreteTimeMeasurementFunction");
-		dropDB();
-		createDB();
-		createTables();
-		double insertTime = runInsert();
-		double selTime = runSelect();
-		DBTimeMeasurementResult dbTMR = new DBTimeMeasurementResult(insertTime, selTime);
+		// run this step 3 times
+		double insertTime = 0.0;
+		double selectTime = 0.0;
+		for(int i=0; i<3; i++) {
+			super.mfByDB.dropDB();
+			super.mfByDB.createDB();
+			super.mfByDB.createTables();
+			insertTime += super.mfByDB.runInsert();
+			selectTime += super.mfByDB.runSelect();
+		}
+		insertTime /= 3;
+		selectTime /= 3;
+		DBTimeMeasurementResult dbTMR = new DBTimeMeasurementResult(insertTime, selectTime);
 		return dbTMR;
 	}
 }
